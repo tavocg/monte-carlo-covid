@@ -35,14 +35,38 @@ def download_datasets():
             (DATA_DIR / dataset).write_bytes(response.read())
 
 
-def load_datasets() -> pd.DataFrame:
+def load_datasets(
+    data_dir: Path = DATA_DIR,
+    rt_window: int = 30,
+    rt_lag: int = 5,
+    rt_min: float = 0.0,
+    rt_max: float = 2.0,
+    min_daily_cases: int = 100,
+) -> pd.DataFrame:
     """Carga todos los datasets locales y los concatena en un solo dataframe."""
-    dataset_paths = [DATA_DIR / dataset for dataset in DATASETS]
-    dataframes = [load_csv(path) for path in dataset_paths]
+    dataset_paths = [data_dir / dataset for dataset in DATASETS]
+    dataframes = [
+        load_csv(
+            path,
+            rt_window=rt_window,
+            rt_lag=rt_lag,
+            rt_min=rt_min,
+            rt_max=rt_max,
+            min_daily_cases=min_daily_cases,
+        )
+        for path in dataset_paths
+    ]
     return pd.concat(dataframes, ignore_index=True)
 
 
-def load_csv(path: Path) -> pd.DataFrame:
+def load_csv(
+    path: Path,
+    rt_window: int = 30,
+    rt_lag: int = 5,
+    rt_min: float = 0.0,
+    rt_max: float = 2.0,
+    min_daily_cases: int = 100,
+) -> pd.DataFrame:
     """Carga un CSV de OxCGRT y calcula casos nuevos diarios y Rt."""
     cols = ["CountryName", "CountryCode", "Jurisdiction", "Date", "ConfirmedCases"]
     df = pd.read_csv(path, usecols=cols)
@@ -78,15 +102,19 @@ def load_csv(path: Path) -> pd.DataFrame:
     # Estimamos Rt como una razón entre el promedio móvil reciente de casos
     # nuevos y el promedio móvil de cinco días antes. El suavizado reduce ruido
     # de reportes atrasados, correcciones y saltos puntuales del dataset.
-    smoothed = df["observed_new_cases"].rolling(30, min_periods=1, center=False).mean()
-    previous = smoothed.shift(5)
+    smoothed = (
+        df["observed_new_cases"]
+        .rolling(rt_window, min_periods=1, center=False)
+        .mean()
+    )
+    previous = smoothed.shift(rt_lag)
     rt = (smoothed / previous).replace([np.inf, -np.inf], np.nan)
-    df["Rt"] = rt.fillna(1.0).clip(lower=0.0, upper=2.0)
+    df["Rt"] = rt.fillna(1.0).clip(lower=rt_min, upper=rt_max)
 
     # Recortamos la serie para empezar cuando la epidemia ya tiene una señal
     # mínima observable. Si nunca llega a 100 casos diarios, usamos el primer
     # día con casos; si tampoco hay casos, devolvemos un dataframe vacío.
-    first_case = df.index[df["observed_new_cases"].ge(100)]
+    first_case = df.index[df["observed_new_cases"].ge(min_daily_cases)]
     if len(first_case) == 0:
         first_case = df.index[df["observed_new_cases"].gt(0)]
     if len(first_case) == 0:
