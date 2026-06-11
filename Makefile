@@ -1,7 +1,7 @@
 PYTHON ?= python
 
 data:
-	$(PYTHON) scripts/download_datasets.py
+	$(PYTHON) src/datasets.py
 
 .PHONY: requirements
 requirements:
