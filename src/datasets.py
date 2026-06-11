@@ -11,25 +11,24 @@ BASE_URL = (
     "/main/data/subnat_fullwithnotes"
 )
 
-COUNTRIES = (
-    "AUS",
-    "BRA",
-    "CAN",
-    "CHN",
-    "GBR",
-    "IND",
-    "USA",
-)
+DATASETS = [
+    "OxCGRT_fullwithnotes_AUS_v1.csv",
+    "OxCGRT_fullwithnotes_BRA_v1.csv",
+    "OxCGRT_fullwithnotes_CAN_v1.csv",
+    "OxCGRT_fullwithnotes_CHN_v1.csv",
+    "OxCGRT_fullwithnotes_GBR_v1.csv",
+    "OxCGRT_fullwithnotes_IND_v1.csv",
+    "OxCGRT_fullwithnotes_USA_v1.csv",
+]
 
 
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     context = create_default_context(cafile=certifi.where())
 
-    for country in COUNTRIES:
-        filename = f"OxCGRT_fullwithnotes_{country}_v1.csv"
-        with urlopen(f"{BASE_URL}/{filename}", context=context) as response:
-            (DATA_DIR / filename).write_bytes(response.read())
+    for dataset in DATASETS:
+        with urlopen(f"{BASE_URL}/{dataset}", context=context) as response:
+            (DATA_DIR / dataset).write_bytes(response.read())
 
 
 if __name__ == "__main__":
