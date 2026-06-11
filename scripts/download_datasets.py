@@ -1,12 +1,11 @@
 from pathlib import Path
 from ssl import create_default_context
 from urllib.request import urlopen
-
 import certifi
-
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT_DIR / "data"
+
 BASE_URL = (
     "https://raw.githubusercontent.com/OxCGRT/covid-policy-dataset"
     "/main/data/subnat_fullwithnotes"
