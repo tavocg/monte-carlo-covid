@@ -1,0 +1,164 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage[spanish, es-tabla]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{biblatex}
+\addbibresource{refs.bib}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\renewcommand{\familydefault}{\rmdefault}
+\setbeamertemplate{navigation symbols}{}
+
+\title{Simulación Monte Carlo de Casos Nuevos de COVID-19}
+\subtitle{Estimación por zona geográfica}
+\author{Gustavo A. Calvo Gutiérrez}
+\institute{Universidad de Costa Rica}
+\date{San José, 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Pregunta de investigación}
+  \begin{block}{Pregunta}
+    ¿Cómo puede un modelo de simulación Monte Carlo, aplicado por zona
+    geográfica y basado en Xie \cite{Xie2020}, estimar la cantidad esperada de
+    casos nuevos de COVID-19 a partir de series temporales observadas?
+  \end{block}
+
+  \begin{itemize}
+    \item Se trabaja con datos nacionales del Oxford COVID-19 Government
+          Response Tracker \cite{Hale2021}.
+    \item La simulación resume la incertidumbre mediante promedios y
+          percentiles.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Objetivo}
+  \begin{block}{Objetivo general}
+    Desarrollar un modelo de simulación Monte Carlo para estimar casos nuevos
+    de COVID-19 en distintas zonas geográficas.
+  \end{block}
+
+  \begin{itemize}
+    \item Adaptar el procedimiento de Xie \cite{Xie2020}.
+    \item Construir series diarias por país.
+    \item Estimar \(R_t\) desde casos observados.
+    \item Comparar trayectorias simuladas con casos reales.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Datos utilizados}
+  \begin{itemize}
+    \item Países: Australia, Brasil, Canadá, China, Reino Unido, India y
+          Estados Unidos.
+    \item Columnas usadas: \texttt{CountryName}, \texttt{CountryCode},
+          \texttt{Jurisdiction}, \texttt{Date} y \texttt{ConfirmedCases}.
+    \item Se conservan solo observaciones nacionales:
+          \texttt{Jurisdiction = NAT\_TOTAL}.
+    \item Los casos nuevos se calculan como diferencias diarias no negativas
+          sobre casos acumulados.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Estimación de \(R_t\)}
+  \begin{itemize}
+    \item Los datos no incluyen \(R_t\) directamente.
+    \item Se aproxima con el cociente entre:
+      \[
+        \frac{\text{promedio móvil de 7 días}}{\text{promedio móvil desplazado 5 días}}
+      \]
+    \item El valor se limita al intervalo \([0,2]\) para reducir inestabilidad
+          numérica.
+    \item La serie inicia cuando hay al menos 100 casos nuevos diarios.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Modelo estocástico}
+  Para un día \(t\), si hay \(I_t\) casos nuevos simulados:
+
+  \[
+    S_t \sim \operatorname{Poisson}(I_t R_t)
+  \]
+
+  \begin{itemize}
+    \item \(S_t\): contagios secundarios generados desde el día \(t\).
+    \item Los retrasos se asignan con una binomial negativa.
+    \item El proceso se repite muchas veces para aproximar el valor esperado:
+      \[
+        E[K_{z,t}] \approx \frac{1}{N}\sum_{k=1}^{N}K_{z,t}^{(k)}.
+      \]
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Flujo computacional}
+  \begin{enumerate}
+    \item Preparar series por país.
+    \item Estimar casos nuevos diarios y \(R_t\).
+    \item Ejecutar 1000 simulaciones por país.
+    \item Resumir promedios y percentiles diarios.
+    \item Generar figuras comparando simulación y observación.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Resultados por país}
+  \begin{table}
+    \centering
+    \small
+    \begin{tabular}{lrrr}
+      \toprule
+      País & \(R_t\) medio & Pico mediano & Acumulado mediano \\
+      \midrule
+      Australia & 1.069 & 237548 & 37015378 \\
+      Brasil & 1.059 & 79706 & 18278252 \\
+      Canadá & 1.039 & 21632 & 3057878 \\
+      China & 1.080 & 632952 & 25822344 \\
+      Reino Unido & 1.047 & 92554 & 15543702 \\
+      India & 1.032 & 110546 & 15048894 \\
+      Estados Unidos & 1.044 & 74788 & 11410956 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+\begin{frame}{Ejemplo: Estados Unidos}
+  \centering
+  \includegraphics[width=0.9\textwidth]{../report/generated/figures/USA_daily_cases.png}
+\end{frame}
+
+\begin{frame}{Ejemplo: Brasil}
+  \centering
+  \includegraphics[width=0.9\textwidth]{../report/generated/figures/BRA_daily_cases.png}
+\end{frame}
+
+\begin{frame}{Interpretación}
+  \begin{itemize}
+    \item El modelo reproduce cualitativamente algunos periodos de crecimiento.
+    \item No es una reconstrucción exacta de los casos reales.
+    \item La simulación se alimenta de su propia trayectoria después del primer
+          día.
+    \item Brotes importados, cambios de reporte y heterogeneidad regional no se
+          modelan explícitamente.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusiones}
+  \begin{itemize}
+    \item El enfoque Monte Carlo permite estimar trayectorias esperadas y
+          rangos de incertidumbre.
+    \item La disponibilidad de variables condiciona la forma final del modelo.
+    \item Una versión predictiva debería incorporar reinyección de casos
+          observados y calibración por ventanas.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Referencias}
+  \printbibliography
+\end{frame}
+
+\end{document}
