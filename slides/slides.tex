@@ -64,6 +64,52 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{Preparación de datos: columnas y filtro}
+  \small
+  El procesamiento carga únicamente las columnas usadas por el modelo y elimina
+  observaciones subnacionales.
+
+  \vspace{0.3cm}
+
+  \scriptsize
+  \begin{verbatim}
+cols = ["CountryName", "CountryCode", "Jurisdiction",
+        "Date", "ConfirmedCases"]
+df = pd.read_csv(path, usecols=cols)
+
+df = df[df["Jurisdiction"].eq("NAT_TOTAL")].copy()
+  \end{verbatim}
+
+  \normalsize
+  \begin{itemize}
+    \item \texttt{NAT\_TOTAL} conserva el total nacional de cada país.
+    \item Esto evita mezclar regiones internas con series nacionales.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Preparación de datos: casos nuevos}
+  \small
+  El dataset reporta \texttt{ConfirmedCases} como acumulado. Por eso los casos
+  nuevos diarios se calculan con diferencias entre días consecutivos.
+
+  \vspace{0.3cm}
+
+  \scriptsize
+  \begin{verbatim}
+df["confirmed_cases"] = pd.to_numeric(
+    df["ConfirmedCases"], errors="coerce"
+)
+
+df["observed_new_cases"] = (
+    df["confirmed_cases"]
+    .diff()
+    .fillna(df["confirmed_cases"])
+    .clip(lower=0)
+    .round()
+)
+  \end{verbatim}
+\end{frame}
+
 \begin{frame}{Estimación de \(R_t\)}
   \begin{itemize}
     \item Los datos no incluyen \(R_t\) directamente.
@@ -75,6 +121,78 @@
           numérica.
     \item La serie inicia cuando hay al menos 100 casos nuevos diarios.
   \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Estimación de \(R_t\): código}
+  \small
+  El promedio móvil suaviza reportes irregulares. El \texttt{shift(5)}
+  compara el nivel reciente de casos con el nivel de cinco días antes.
+
+  \vspace{0.2cm}
+
+  \scriptsize
+  \begin{verbatim}
+smoothed = (
+    df["observed_new_cases"]
+    .rolling(rt_window, min_periods=1, center=False)
+    .mean()
+)
+previous = smoothed.shift(rt_lag)
+rt = (smoothed / previous).replace([np.inf, -np.inf], np.nan)
+df["Rt"] = rt.fillna(1.0).clip(lower=rt_min, upper=rt_max)
+  \end{verbatim}
+
+  \normalsize
+  En la configuración usada: \texttt{rt\_window = 7},
+  \texttt{rt\_lag = 5}, \texttt{rt\_min = 0} y \texttt{rt\_max = 2}.
+\end{frame}
+
+\begin{frame}{Estimación de \(R_t\): ejemplo}
+  \small
+  El desplazamiento compara el promedio móvil de hoy con el promedio móvil
+  observado cinco días antes.
+
+  \begin{table}
+    \centering
+    \begin{tabular}{rrrr}
+      \toprule
+      Día & Casos nuevos & Prom. 7 días & Prom. desplazado \\
+      \midrule
+      1 & 100 & 100.0 & -- \\
+      2 & 120 & 110.0 & -- \\
+      3 & 140 & 120.0 & -- \\
+      4 & 160 & 130.0 & -- \\
+      5 & 180 & 140.0 & -- \\
+      6 & 220 & 153.3 & 100.0 \\
+      7 & 260 & 168.6 & 110.0 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  Por ejemplo, en el día 6 se aproxima \(R_t \approx 153.3 / 100.0\).
+\end{frame}
+
+\begin{frame}[fragile]{Inicio de la serie simulada}
+  \small
+  La simulación no empieza desde el primer registro del archivo. Se recorta la
+  serie hasta que exista una señal mínima de transmisión.
+
+  \vspace{0.3cm}
+
+  \scriptsize
+  \begin{verbatim}
+first_case = df.index[
+    df["observed_new_cases"].ge(min_daily_cases)
+]
+if len(first_case) == 0:
+    first_case = df.index[df["observed_new_cases"].gt(0)]
+if len(first_case) == 0:
+    return df.iloc[0:0].copy()
+return df.loc[first_case[0] :].reset_index(drop=True)
+  \end{verbatim}
+
+  \normalsize
+  En la configuración usada, \texttt{min\_daily\_cases = 100}.
 \end{frame}
 
 \begin{frame}{Modelo estocástico}
@@ -92,6 +210,52 @@
         E[K_{z,t}] \approx \frac{1}{N}\sum_{k=1}^{N}K_{z,t}^{(k)}.
       \]
   \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Retrasos con binomial negativa}
+  \small
+  La distribución de retrasos asigna en qué día futuro aparecen los contagios
+  secundarios. La posición cero representa un retraso de un día.
+
+  \vspace{0.2cm}
+
+  \scriptsize
+  \begin{verbatim}
+p = dispersion / (dispersion + mean_delay)
+probs = np.empty(max_delay, dtype=float)
+probs[0] = p**dispersion
+
+for idx in range(1, max_delay):
+    failures = idx - 1
+    probs[idx] = (
+        probs[idx - 1] * (failures + dispersion)
+        / idx * (1 - p)
+    )
+  \end{verbatim}
+
+  \normalsize
+  En la simulación base se usa media 5 y dispersión 2.
+\end{frame}
+
+\begin{frame}[fragile]{Asignación de contagios secundarios}
+  \small
+  Una vez generado el total de casos secundarios, se distribuyen en días
+  futuros según las probabilidades de retraso.
+
+  \vspace{0.2cm}
+
+  \scriptsize
+  \begin{verbatim}
+total_secondary_cases = rng.poisson(
+    lam=infected_today * rt_values[day]
+)
+
+delay_counts = rng.multinomial(
+    n=int(valid_secondary_cases),
+    pvals=valid_probs / valid_probs_sum,
+)
+simulated_new_cases[day + 1 : day + 1 + remaining_days] += delay_counts
+  \end{verbatim}
 \end{frame}
 
 \begin{frame}{Flujo computacional}
@@ -122,6 +286,14 @@
       \bottomrule
     \end{tabular}
   \end{table}
+
+  \scriptsize
+  \begin{itemize}
+    \item Pico mediano: mediana del máximo diario de casos simulados en las
+          1000 simulaciones de cada país.
+    \item Acumulado mediano: mediana del total acumulado simulado al final del
+          horizonte, incluyendo los 30 días extra.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Ejemplo: Estados Unidos}
