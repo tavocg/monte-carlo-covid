@@ -1,0 +1,350 @@
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage[spanish, es-tabla]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{biblatex}
+\addbibresource{refs.bib}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\setlist[itemize]{leftmargin=*, itemsep=0.35em}
+\newcommand{\institucion}{Universidad de Costa Rica}
+\newcommand{\campus}{Ciudad Universitaria Rodrigo Facio}
+\newcommand{\facultad}{Facultad de Ciencias Básicas}
+\newcommand{\escuela}{Escuela de Física}
+\newcommand{\curso}{Mecánica Estadística Computacional}
+\newcommand{\tituloanteproyecto}{Proyecto de Investigación}
+\newcommand{\titulo}{Simulación Monte Carlo de Casos Nuevos de COVID-19 por Zona Geográfica}
+\newcommand{\autor}{Gustavo A. Calvo Gutiérrez}
+\newcommand{\lugarfecha}{San José, 2026.}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \LARGE \textbf{\textsc{\institucion}}
+    \Large
+    \\[1cm]
+    \textsc{\campus}
+    \\[0.1cm]
+    \textsc{\facultad}
+    \\[0.1cm]
+    \textsc{\escuela} \\
+    \vspace*{20 mm}
+    \LARGE{\textsc{\textbf{\curso}}}
+  \end{center}
+
+  \vspace{2cm}
+
+  \hrulefill
+  \begin{center}
+    \large \textbf{\textsc{\tituloanteproyecto}}
+    \\[0.5cm]
+    \textsc{\titulo}
+  \end{center}
+  \hrulefill
+
+  \vfill
+
+  \begin{center}
+    \large \textbf{\autor}
+  \end{center}
+
+  \vspace{1cm}
+
+  \begin{center}
+    \textit{\lugarfecha}
+  \end{center}
+\end{titlepage}
+
+\section{Pregunta de Investigación y Justificación}
+
+\subsection{Pregunta de Investigación}
+
+\noindent
+\textit{
+  ¿Cómo puede un modelo de simulación Monte Carlo, aplicado por zona
+  geográfica y basado en el procedimiento propuesto por Xie \cite{Xie2020},
+  estimar la cantidad esperada de casos nuevos de COVID-19 a partir de series
+  temporales observadas?
+}
+
+\subsection{Justificación}
+
+El estudio de la propagación de COVID-19 continúa siendo relevante como caso de
+referencia para comprender fenómenos epidémicos donde la transmisión depende de
+interacciones sociales y de variaciones temporales en la dinámica de contagio.
+Los modelos estocásticos ofrecen una ventaja importante frente a aproximaciones
+puramente deterministas, ya que permiten representar explícitamente la
+incertidumbre asociada a la ocurrencia de nuevos contagios y a la variabilidad
+temporal de la transmisión.
+
+El trabajo de Xie \cite{Xie2020} plantea una estrategia basada en simulación
+Monte Carlo para describir la dinámica de contagio mediante tasas de infección
+variables en el tiempo, junto con distribuciones probabilísticas para modelar
+tanto la cantidad de personas contagiadas por cada caso activo como el momento
+en que dichos contagios ocurren.
+
+El presente anteproyecto propone tomar ese artículo como punto de partida
+metodológico para realizar simulaciones por zona geográfica y estimar, a partir
+de múltiples corridas aleatorias, la cantidad esperada de casos nuevos en cada
+periodo. La meta no es evaluar la efectividad de medidas sanitarias ni comparar
+intervenciones, sino construir una herramienta de simulación capaz de generar
+trayectorias plausibles de contagio y resumirlas mediante su valor esperado.
+Este enfoque es pertinente porque permite vincular la simulación con series
+epidemiológicas observadas y estudiar la variabilidad inherente al proceso de
+transmisión. Para ello, el estudio puede apoyarse en fuentes comparables de
+datos epidemiológicos, como \textit{Our World in Data}
+\cite{owid-coronavirus}.
+
+\newpage
+
+\section{Objetivos}
+
+\subsection{Objetivo General}
+
+Desarrollar un modelo de simulación Monte Carlo, basado en el procedimiento
+propuesto por Xie \cite{Xie2020}, para estimar la cantidad esperada de casos
+nuevos de COVID-19 en distintas zonas geográficas.
+
+\subsection{Objetivos Específicos}
+
+\begin{itemize}
+  \item Adaptar el procedimiento Monte Carlo de Xie \cite{Xie2020} a un
+        conjunto de datos temporales de COVID-19 organizado por zona geográfica.
+  \item Recopilar y estructurar series de tiempo con variables relevantes,
+        tales como casos nuevos, personas infectadas, recuperadas, casos
+        activos y población de referencia por zona, utilizando fuentes
+        comparables \cite{owid-coronavirus}.
+  \item Modelar la probabilidad diaria de contagio como un componente aleatorio
+        dependiente del tiempo y calibrado con la evolución observada de los
+        contagios en cada zona.
+  \item Comparar las trayectorias simuladas con los datos reales observados
+        para identificar discrepancias, patrones recurrentes y posibles ajustes
+        del modelo.
+  \item Estimar, a partir de múltiples simulaciones, el valor esperado de
+        casos nuevos por periodo en cada zona analizada.
+\end{itemize}
+
+\newpage
+
+\section{Marco Teórico}
+
+La simulación de epidemias puede abordarse desde modelos deterministas, como
+los de tipo SIR, o desde modelos estocásticos que incorporan explícitamente la
+incertidumbre del proceso de contagio.
+Los modelos estocásticos consideran que la transmisión
+ocurre a través de eventos aleatorios cuya realización concreta puede variar
+incluso bajo condiciones iniciales similares. Esta segunda perspectiva resulta
+especialmente útil cuando se desea representar fluctuaciones diarias,
+heterogeneidad espacial y cambios abruptos en el comportamiento social.
+
+En el trabajo de Xie \cite{Xie2020},
+la propuesta modela la propagación de COVID-19 como un proceso de puntos en el
+que cada persona infecciosa puede generar un número aleatorio de nuevos
+contagios. La cantidad de infecciones secundarias se representa mediante una
+distribución de Poisson de una tasa de infección \(R_t\),
+mientras que el momento en que ocurre cada nuevo contagio se modela mediante
+una distribución binomial negativa con media \(\mu_T\). Esta construcción
+permite simular tanto la cantidad como el tiempo de aparición de los nuevos
+casos.
+
+En el código suplementario del artículo, \(R_t\) se usa como la tasa de
+infección, mientras que la cantidad de casos nuevos diarios se registra por
+separado en el vector \texttt{kk}. Para mantener esa misma lógica y evitar
+confusiones, en este anteproyecto se definirá \(K_{z,t}\) como la variable
+aleatoria que representa la cantidad de casos nuevos en la zona \(z\) durante
+el día \(t\), e \(I_{z,t}\) como el número de casos infecciosos presentes en
+esa misma zona y momento. Siguiendo la idea básica del artículo de
+Xie \cite{Xie2020}, se tomará \(R_t\) como la tasa de infección diaria; al
+trabajar por zonas, esta notación se adaptará como \(R_{z,t}\). Así, una
+formulación simple del modelo es
+\[
+  K_{z,t} \sim \operatorname{Poisson}(R_{z,t} I_{z,t}),
+\]
+por lo que el valor esperado de casos nuevos queda dado por
+\[
+  E[K_{z,t}] = R_{z,t} I_{z,t}.
+\]
+En consecuencia, el objetivo principal de la simulación será aproximar
+\(E[K_{z,t}]\), es decir, la cantidad esperada de casos nuevos para cada zona y
+cada periodo.
+
+Un punto central del modelo es que \(R_t\) no se considera constante. La tasa
+de transmisión cambia con el tiempo para reflejar variaciones en el contacto
+social y el comportamiento de la población. En el artículo de referencia, la
+selección de patrones para \(R_t\) se apoya en el ajuste a datos observados
+\cite{Xie2020}. Esta idea es especialmente valiosa para el presente proyecto,
+porque permite representar cambios en la intensidad de la transmisión sin
+abandonar el carácter probabilístico del modelo.
+
+Desde el punto de vista empírico, la simulación requiere series de tiempo
+comparables. No basta con observar el número acumulado de casos; es necesario
+considerar variables que cambian día con día, tales como el número de personas
+activamente infectadas, recuperadas, la población potencialmente expuesta y los
+casos nuevos reportados en cada zona. Para documentar estos factores, resultan
+particularmente útiles bases de datos como \textit{Our World in Data}
+\cite{owid-coronavirus}, que reúne indicadores epidemiológicos comparables.
+
+El proyecto también se apoya en la idea de validación por contraste entre
+simulación y observación.
+Si el modelo captura adecuadamente la tendencia general de contagios y la
+variación de los casos nuevos en cada zona, entonces puede utilizarse para
+obtener estimaciones esperadas a partir de muchas realizaciones del proceso
+aleatorio. Si no lo hace, las discrepancias mismas aportan información sobre
+variables omitidas o supuestos que deben refinarse.
+
+\newpage
+
+\section{Metodología}
+
+\subsection{Recopilación y Organización de Datos}
+
+La base empírica utilizada corresponde a los archivos locales del Oxford
+COVID-19 Government Response Tracker, disponibles en el directorio
+\texttt{data/} para Australia, Brasil, Canadá, China, Reino Unido, India y
+Estados Unidos \cite{Hale2021}. Para evitar cargar columnas de notas y
+variables no utilizadas, el procesamiento lee únicamente
+\texttt{CountryName}, \texttt{CountryCode}, \texttt{Jurisdiction},
+\texttt{Date} y \texttt{ConfirmedCases}. En cada archivo se conservaron solo
+las observaciones nacionales, identificadas por
+\texttt{Jurisdiction = NAT\_TOTAL}.
+
+La variable \texttt{ConfirmedCases} es acumulada, por lo que los casos nuevos
+observados se obtuvieron mediante diferencias diarias no negativas. Como los
+archivos no contienen directamente una columna \(R_t\), se estimó un
+\(R_t\) efectivo a partir del cociente entre el promedio móvil de siete días de
+casos nuevos y el mismo promedio desplazado cinco días. Este desplazamiento
+representa el intervalo generacional medio usado en la simulación. Para reducir
+la inestabilidad causada por divisiones sobre bases muy pequeñas, el valor de
+\(R_t\) se limitó al intervalo \([0,2]\). La simulación de cada país inició en
+el primer día con al menos 100 casos nuevos reportados.
+
+\subsection{Construcción del Modelo Estocástico}
+
+Tomando como referencia el trabajo de Xie \cite{Xie2020}, se implementó un
+modelo en el que los casos nuevos simulados de un día actúan como fuente de
+contagios secundarios futuros. Para un día \(t\), si la simulación tiene
+\(I_t\) infectados nuevos, la cantidad total de contagios secundarios se dibuja
+como
+\[
+  S_t \sim \operatorname{Poisson}(I_t R_t).
+\]
+Esta forma es equivalente a dibujar una variable
+\(\operatorname{Poisson}(R_t)\) por cada infectado y sumar los resultados, pero
+es más eficiente computacionalmente. A cada contagio secundario se le asigna
+un retraso \(D\) en días mediante una distribución binomial negativa con media
+5 y dispersión 2, más un día adicional para evitar contagios en el mismo día.
+
+Bajo esta notación, la simulación Monte Carlo produce realizaciones
+\[
+  K_{z,t}^{(1)}, K_{z,t}^{(2)}, \dots, K_{z,t}^{(N)},
+\]
+y el valor de expectación de casos nuevos
+\[
+  E[K_{z,t}] \approx
+  \sum_{k=1}^{N} \frac{K_{z,t}^{(k)}}{N}.
+\]
+
+El procedimiento implementado fue el siguiente:
+
+\begin{itemize}
+  \item Para cada país se construyó una serie diaria con fecha, casos nuevos
+        observados y \(R_t\) estimado.
+  \item Se usaron los casos nuevos del primer día de la ventana como semilla
+        inicial.
+  \item En cada día observado, los casos simulados generaron contagios
+        secundarios con distribución de Poisson.
+  \item Los contagios secundarios fueron agregados a días futuros mediante la
+        distribución de retrasos.
+  \item Se extendió el horizonte 30 días más allá de la última fecha observada.
+  \item El proceso se repitió 1000 veces por país y se calcularon percentiles
+        5, 25, 50, 75 y 95 de casos diarios y acumulados.
+\end{itemize}
+
+\section{Resultados}
+
+La Tabla \ref{tab:simulation-results} resume los resultados principales de las
+1000 simulaciones por país. Las fechas iniciales varían porque cada serie se
+recortó al primer día con al menos 100 casos nuevos. En todos los casos la
+fecha final observada fue el 31 de diciembre de 2022 y el horizonte simulado se
+extendió 30 días adicionales.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{lrrrr}
+    \hline
+    País & \(R_t\) medio & Pico mediano & Fecha modal del pico
+    & Acumulado mediano \\
+    \hline
+    Australia & 1.069 & 237548 & 2022-01-19 & 37015378 \\
+    Brasil & 1.059 & 79706 & 2022-02-05 & 18278252 \\
+    Canadá & 1.039 & 21632 & 2022-01-12 & 3057878 \\
+    China & 1.080 & 632952 & 2022-12-06 & 25822344 \\
+    Reino Unido & 1.047 & 92554 & 2022-02-07 & 15543702 \\
+    India & 1.032 & 110546 & 2021-05-12 & 15048894 \\
+    Estados Unidos & 1.044 & 74788 & 2022-01-17 & 11410956 \\
+    \hline
+  \end{tabular}
+  \caption{Resumen de 1000 simulaciones Monte Carlo por país.}
+  \label{tab:simulation-results}
+\end{table}
+
+Los resultados muestran que el modelo reproduce de manera cualitativa algunos
+periodos de crecimiento observados, pero no debe interpretarse como una
+reconstrucción exacta de los casos reales. La diferencia principal es que la
+simulación se alimenta de su propia trayectoria después del día inicial; por
+ello, pequeñas diferencias tempranas pueden amplificarse durante ventanas de
+más de mil días. Esto es visible en países como Australia y China, donde el
+acumulado mediano simulado supera ampliamente los casos observados en la serie
+procesada.
+
+En contraste, Canadá, Reino Unido, India y Estados Unidos presentan acumulados
+simulados menores que los observados. Esto sugiere que una sola cadena de
+transmisión inicial, aun con \(R_t\) variable, no captura completamente la
+entrada repetida de brotes, cambios de reporte, importaciones de casos ni
+heterogeneidad regional. El resultado es útil como ejercicio de Monte Carlo
+basado en \(R_t\), pero una versión predictiva debería incorporar reinyección
+de casos observados, calibración por ventanas y posiblemente parámetros por
+subregión.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/USA_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Estados
+  Unidos.}
+  \label{fig:usa-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/BRA_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Brasil.}
+  \label{fig:brazil-daily}
+\end{figure}
+
+\newpage
+
+\printbibliography
+
+\end{document}
