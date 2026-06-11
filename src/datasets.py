@@ -26,6 +26,7 @@ DATASETS = [
 
 
 def download_datasets():
+    """Descarga los datasets configurados en DATASETS dentro de DATA_DIR."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     context = create_default_context(cafile=certifi.where())
 
@@ -35,12 +36,14 @@ def download_datasets():
 
 
 def load_datasets() -> pd.DataFrame:
+    """Carga todos los datasets locales y los concatena en un solo dataframe."""
     dataset_paths = [DATA_DIR / dataset for dataset in DATASETS]
     dataframes = [load_csv(path) for path in dataset_paths]
     return pd.concat(dataframes, ignore_index=True)
 
 
 def load_csv(path: Path) -> pd.DataFrame:
+    """Carga un CSV de OxCGRT y calcula casos nuevos diarios y Rt."""
     cols = ["CountryName", "CountryCode", "Jurisdiction", "Date", "ConfirmedCases"]
     df = pd.read_csv(path, usecols=cols)
 
