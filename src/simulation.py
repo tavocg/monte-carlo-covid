@@ -15,7 +15,7 @@ class Config:
     n_extra_days: int = 30
     mean_delay: float = 5
     dispersion_delay: float = 2
-    rt_window: int = 30
+    rt_window: int = 7
     rt_lag: int = 5
     rt_min: float = 0.0
     rt_max: float = 2.0
@@ -180,18 +180,21 @@ def run_country_simulations(
     )
     cumulative = np.cumsum(simulations, axis=1)
 
-    # Resumimos la distribución diaria de casos y de acumulados con percentiles.
+    # Resumimos la distribución diaria de casos y de acumulados con promedios
+    # y percentiles.
     summary = pd.DataFrame(
         {
             "country_code": country_df["CountryCode"].iloc[0],
             "country_name": country_df["CountryName"].iloc[0],
             "date": dates,
+            "mean": np.mean(simulations, axis=0),
             "p05": np.percentile(simulations, 5, axis=0),
             "p25": np.percentile(simulations, 25, axis=0),
             "median": np.percentile(simulations, 50, axis=0),
             "p75": np.percentile(simulations, 75, axis=0),
             "p95": np.percentile(simulations, 95, axis=0),
             "cumulative_p25": np.percentile(cumulative, 25, axis=0),
+            "cumulative_mean": np.mean(cumulative, axis=0),
             "cumulative_median": np.percentile(cumulative, 50, axis=0),
             "cumulative_p75": np.percentile(cumulative, 75, axis=0),
         }

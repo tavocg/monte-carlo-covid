@@ -1,12 +1,12 @@
 PYTHON ?= python
-TEX ?= tectonic
+TECTONIC ?= tectonic
 
 all: report/report.pdf
 
 report/report.pdf: report/report.tex report/refs.bib report/generated
-	cd report && $(TEX) report.tex
+	cd report && $(TECTONIC) report.tex
 
-report/generated:
+report/generated: src/main.py src/simulation.py src/datasets.py
 	$(PYTHON) src/main.py
 
 data:

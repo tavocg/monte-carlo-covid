@@ -37,7 +37,7 @@ def download_datasets():
 
 def load_datasets(
     data_dir: Path = DATA_DIR,
-    rt_window: int = 30,
+    rt_window: int = 7,
     rt_lag: int = 5,
     rt_min: float = 0.0,
     rt_max: float = 2.0,
@@ -61,7 +61,7 @@ def load_datasets(
 
 def load_csv(
     path: Path,
-    rt_window: int = 30,
+    rt_window: int = 7,
     rt_lag: int = 5,
     rt_min: float = 0.0,
     rt_max: float = 2.0,

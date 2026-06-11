@@ -32,7 +32,7 @@
 \newcommand{\facultad}{Facultad de Ciencias Básicas}
 \newcommand{\escuela}{Escuela de Física}
 \newcommand{\curso}{Mecánica Estadística Computacional}
-\newcommand{\tituloanteproyecto}{Proyecto de Investigación}
+\newcommand{\tituloproyecto}{Proyecto de Investigación}
 \newcommand{\titulo}{Simulación Monte Carlo de Casos Nuevos de COVID-19 por Zona Geográfica}
 \newcommand{\autor}{Gustavo A. Calvo Gutiérrez}
 \newcommand{\lugarfecha}{San José, 2026.}
@@ -57,7 +57,7 @@
 
   \hrulefill
   \begin{center}
-    \large \textbf{\textsc{\tituloanteproyecto}}
+    \large \textbf{\textsc{\tituloproyecto}}
     \\[0.5cm]
     \textsc{\titulo}
   \end{center}
@@ -104,7 +104,7 @@ variables en el tiempo, junto con distribuciones probabilísticas para modelar
 tanto la cantidad de personas contagiadas por cada caso activo como el momento
 en que dichos contagios ocurren.
 
-El presente anteproyecto propone tomar ese artículo como punto de partida
+El presente proyecto propone tomar ese artículo como punto de partida
 metodológico para realizar simulaciones por zona geográfica y estimar, a partir
 de múltiples corridas aleatorias, la cantidad esperada de casos nuevos en cada
 periodo. La meta no es evaluar la efectividad de medidas sanitarias ni comparar
@@ -131,10 +131,9 @@ nuevos de COVID-19 en distintas zonas geográficas.
 \begin{itemize}
   \item Adaptar el procedimiento Monte Carlo de Xie \cite{Xie2020} a un
         conjunto de datos temporales de COVID-19 organizado por zona geográfica.
-  \item Recopilar y estructurar series de tiempo con variables relevantes,
-        tales como casos nuevos, personas infectadas, recuperadas, casos
-        activos y población de referencia por zona, utilizando fuentes
-        comparables \cite{owid-coronavirus}.
+  \item Recopilar y estructurar las series de tiempo disponibles para cada
+        zona geográfica, ajustando las variables del modelo a las columnas
+        efectivamente presentes en el conjunto de datos utilizado.
   \item Modelar la probabilidad diaria de contagio como un componente aleatorio
         dependiente del tiempo y calibrado con la evolución observada de los
         contagios en cada zona.
@@ -171,7 +170,7 @@ casos.
 En el código suplementario del artículo, \(R_t\) se usa como la tasa de
 infección, mientras que la cantidad de casos nuevos diarios se registra por
 separado en el vector \texttt{kk}. Para mantener esa misma lógica y evitar
-confusiones, en este anteproyecto se definirá \(K_{z,t}\) como la variable
+confusiones, en este proyecto se definirá \(K_{z,t}\) como la variable
 aleatoria que representa la cantidad de casos nuevos en la zona \(z\) durante
 el día \(t\), e \(I_{z,t}\) como el número de casos infecciosos presentes en
 esa misma zona y momento. Siguiendo la idea básica del artículo de
@@ -198,12 +197,13 @@ porque permite representar cambios en la intensidad de la transmisión sin
 abandonar el carácter probabilístico del modelo.
 
 Desde el punto de vista empírico, la simulación requiere series de tiempo
-comparables. No basta con observar el número acumulado de casos; es necesario
-considerar variables que cambian día con día, tales como el número de personas
-activamente infectadas, recuperadas, la población potencialmente expuesta y los
-casos nuevos reportados en cada zona. Para documentar estos factores, resultan
-particularmente útiles bases de datos como \textit{Our World in Data}
-\cite{owid-coronavirus}, que reúne indicadores epidemiológicos comparables.
+comparables. Aunque un modelo epidemiológico más completo podría incorporar
+personas activamente infectadas, recuperadas, población potencialmente expuesta
+y casos nuevos reportados en cada zona, la implementación se ajusta a las
+variables disponibles de forma consistente en el conjunto de datos utilizado.
+Para documentar estos factores, resultan particularmente útiles bases de datos
+como \textit{Our World in Data} \cite{owid-coronavirus}, que reúne indicadores
+epidemiológicos comparables.
 
 El proyecto también se apoya en la idea de validación por contraste entre
 simulación y observación.
@@ -228,6 +228,12 @@ variables no utilizadas, el procesamiento lee únicamente
 \texttt{Date} y \texttt{ConfirmedCases}. En cada archivo se conservaron solo
 las observaciones nacionales, identificadas por
 \texttt{Jurisdiction = NAT\_TOTAL}.
+
+Debido a esta estructura de datos, el modelo no utiliza directamente variables
+como recuperados, casos activos o población expuesta. En su lugar, adapta la
+simulación a la información disponible: casos acumulados confirmados, casos
+nuevos estimados por diferencias diarias y una tasa efectiva \(R_t\) inferida
+a partir de la evolución temporal de esos casos nuevos.
 
 La variable \texttt{ConfirmedCases} es acumulada, por lo que los casos nuevos
 observados se obtuvieron mediante diferencias diarias no negativas. Como los
@@ -277,17 +283,21 @@ El procedimiento implementado fue el siguiente:
   \item Los contagios secundarios fueron agregados a días futuros mediante la
         distribución de retrasos.
   \item Se extendió el horizonte 30 días más allá de la última fecha observada.
-  \item El proceso se repitió 1000 veces por país y se calcularon percentiles
-        5, 25, 50, 75 y 95 de casos diarios y acumulados.
+  \item El proceso se repitió 1000 veces por país y se calculó el promedio
+        como estimación del valor esperado, junto con percentiles 5, 25, 50,
+        75 y 95 de casos diarios y acumulados.
 \end{itemize}
 
 \section{Resultados}
 
-La Tabla \ref{tab:simulation-results} resume los resultados principales de las
-1000 simulaciones por país. Las fechas iniciales varían porque cada serie se
-recortó al primer día con al menos 100 casos nuevos. En todos los casos la
-fecha final observada fue el 31 de diciembre de 2022 y el horizonte simulado se
-extendió 30 días adicionales.
+La Tabla \ref{tab:simulation-results} resume los resultados principales de una
+corrida de referencia fija con 1000 simulaciones por país y los parámetros por
+defecto del modelo. Las fechas iniciales varían porque cada serie se recortó al
+primer día con al menos 100 casos nuevos. En todos los casos la fecha final
+observada fue el 31 de diciembre de 2022 y el horizonte simulado se extendió 30
+días adicionales. El valor esperado diario se estimó con el promedio de las
+simulaciones; la tabla presenta además estadísticas robustas como la mediana y
+los percentiles para resumir la variabilidad de Monte Carlo.
 
 \begin{table}[htbp]
   \centering
@@ -330,10 +340,9 @@ subregión.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.9\textwidth]{generated/figures/USA_daily_cases.png}
-  \caption{Casos nuevos observados y simulación Monte Carlo para Estados
-  Unidos.}
-  \label{fig:usa-daily}
+  \includegraphics[width=0.9\textwidth]{generated/figures/AUS_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Australia.}
+  \label{fig:aus-daily}
 \end{figure}
 
 \begin{figure}[htbp]
@@ -341,6 +350,42 @@ subregión.
   \includegraphics[width=0.9\textwidth]{generated/figures/BRA_daily_cases.png}
   \caption{Casos nuevos observados y simulación Monte Carlo para Brasil.}
   \label{fig:brazil-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/CAN_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Canadá.}
+  \label{fig:can-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/CHN_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para China.}
+  \label{fig:chn-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/GBR_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Reino Unido.}
+  \label{fig:gbr-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/IND_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para India.}
+  \label{fig:ind-daily}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{generated/figures/USA_daily_cases.png}
+  \caption{Casos nuevos observados y simulación Monte Carlo para Estados
+  Unidos.}
+  \label{fig:usa-daily}
 \end{figure}
 
 \newpage

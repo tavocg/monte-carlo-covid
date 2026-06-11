@@ -19,8 +19,8 @@ def write_figures(summary, observed, output_dir: Path) -> None:
         plt.figure(figsize=(10, 5))
         plt.plot(
             country_summary["date"],
-            country_summary["median"],
-            label="Mediana simulada",
+            country_summary["mean"],
+            label="Valor esperado simulado",
         )
         plt.fill_between(
             country_summary["date"],
@@ -48,8 +48,8 @@ def write_figures(summary, observed, output_dir: Path) -> None:
         plt.figure(figsize=(10, 5))
         plt.plot(
             country_summary["date"],
-            country_summary["cumulative_median"],
-            label="Mediana acumulada",
+            country_summary["cumulative_mean"],
+            label="Valor esperado acumulado",
         )
         plt.fill_between(
             country_summary["date"],
