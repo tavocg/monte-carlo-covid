@@ -322,8 +322,25 @@ simulated_new_cases[day + 1 : day + 1 + remaining_days] += delay_counts
     \item El enfoque Monte Carlo permite estimar trayectorias esperadas y
           rangos de incertidumbre.
     \item La disponibilidad de variables condiciona la forma final del modelo.
+    \item El método no debe compararse directamente con modelos SIR, SEIR o
+          bayesianos: tiene un alcance más exploratorio y operativo.
+    \item La simulación depende de su propia trayectoria después del día
+          inicial, por lo que errores tempranos pueden amplificarse.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Sugerencias}
+  \begin{itemize}
     \item Una versión predictiva debería incorporar reinyección de casos
           observados y calibración por ventanas.
+    \item Sería útil ajustar parámetros por país o por subregión para capturar
+          heterogeneidad espacial.
+    \item Una extensión futura podría tratar las medidas sanitarias como
+          variables aleatorias o covariables.
+    \item Con múltiples simulaciones, se podrían estimar pesos asociados a esas
+          medidas y explorar cuáles se relacionan con menor transmisión.
+    \item Ese análisis queda fuera del alcance actual y requeriría controles
+          adicionales para no confundir correlación con causalidad.
   \end{itemize}
 \end{frame}
 

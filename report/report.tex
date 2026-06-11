@@ -388,6 +388,61 @@ subregión.
 
 \newpage
 
+\section{Conclusiones y Sugerencias}
+
+El modelo implementado permite aproximar, mediante simulación Monte Carlo, la
+distribución de casos nuevos diarios esperados a partir de una serie temporal
+observada y de una estimación efectiva de \(R_t\). La principal fortaleza del
+enfoque es que hace explícita la variabilidad del proceso de transmisión: en
+lugar de producir una sola trayectoria determinista, genera múltiples
+realizaciones posibles y permite resumirlas mediante promedios, medianas y
+percentiles.
+
+Sin embargo, este método debe interpretarse dentro de su alcance. Como señala
+Xie \cite{Xie2020}, el procedimiento no pretende competir directamente con
+metodologías SIR, SEIR o enfoques bayesianos. Esos métodos suelen incorporar
+estructuras epidemiológicas más explícitas, parámetros poblacionales,
+incertidumbre posterior o mecanismos de inferencia más completos. En contraste,
+el modelo desarrollado en este proyecto es una herramienta estocástica
+operativa para explorar trayectorias posibles bajo una serie \(R_t\) estimada,
+pero no una reconstrucción mecanística completa de la epidemia.
+
+Una limitación importante es que la simulación se alimenta de sus propios casos
+después del día inicial. Por esta razón, errores pequeños al inicio pueden
+amplificarse con el tiempo, especialmente en ventanas largas. Además, el modelo
+no incorpora explícitamente importaciones de casos, reinicios de brotes,
+cambios en criterios de reporte, diferencias regionales dentro de un país ni
+modificaciones abruptas en el comportamiento social. Esto explica por qué las
+trayectorias simuladas pueden separarse de los datos observados aun cuando la
+tendencia general sea razonable en algunos periodos.
+
+Como mejora directa, una versión posterior podría reinyectar información
+observada cada cierto número de días para evitar que la simulación se aleje
+indefinidamente de la serie empírica. También sería conveniente calibrar el
+modelo por ventanas temporales, ajustar parámetros por país o por subregión y
+comparar la sensibilidad de los resultados ante distintos valores del retraso
+medio, la dispersión y el umbral de inicio.
+
+Una extensión particularmente interesante, aunque fuera del alcance de este
+proyecto, sería incorporar las medidas sanitarias aplicadas por país como
+variables aleatorias o covariables del proceso de transmisión. Dado que el
+Oxford COVID-19 Government Response Tracker incluye información sobre políticas
+públicas, se podría explorar un modelo Monte Carlo donde diferentes medidas
+reciban pesos estimados a partir de múltiples simulaciones. En principio, esto
+permitiría estudiar qué combinaciones de medidas se asocian con reducciones
+mayores en la transmisión. No obstante, tal análisis requeriría un diseño
+metodológico más cuidadoso para separar correlación de causalidad, controlar
+rezagos temporales, considerar diferencias entre países y evitar interpretar
+los pesos simulados como efectos causales directos.
+
+En síntesis, el proyecto cumple el objetivo de implementar una simulación
+Monte Carlo basada en \(R_t\) para generar trayectorias plausibles de casos
+nuevos por zona geográfica. Sus resultados son útiles como ejercicio
+computacional y como base para estudiar incertidumbre, pero deben leerse como
+una aproximación exploratoria y no como una herramienta predictiva cerrada.
+
+\newpage
+
 \begin{thebibliography}{9}
 
 \bibitem{Xie2020}
