@@ -28,9 +28,14 @@ DATASETS = [
 def download_datasets():
     """Descarga los datasets configurados en DATASETS dentro de DATA_DIR."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # certifi provee una lista confiable de certificados para que la descarga
+    # HTTPS funcione de forma consistente en distintos sistemas.
     context = create_default_context(cafile=certifi.where())
 
     for dataset in DATASETS:
+        # Cada archivo corresponde a un país. Se guarda localmente para que la
+        # simulación no dependa de internet cada vez que se ejecuta el modelo.
         with urlopen(f"{BASE_URL}/{dataset}", context=context) as response:
             (DATA_DIR / dataset).write_bytes(response.read())
 
@@ -44,7 +49,12 @@ def load_datasets(
     min_daily_cases: int = 100,
 ) -> pd.DataFrame:
     """Carga todos los datasets locales y los concatena en un solo dataframe."""
+    # Construimos las rutas esperadas a partir de DATASETS. El modelo asume que
+    # estos CSV ya existen en data/ o que antes se ejecutó download_datasets().
     dataset_paths = [data_dir / dataset for dataset in DATASETS]
+
+    # Cada país se procesa con la misma función para que todos tengan las
+    # mismas columnas finales: fecha, casos nuevos observados y Rt estimado.
     dataframes = [
         load_csv(
             path,
@@ -68,6 +78,8 @@ def load_csv(
     min_daily_cases: int = 100,
 ) -> pd.DataFrame:
     """Carga un CSV de OxCGRT y calcula casos nuevos diarios y Rt."""
+    # Usamos solo las columnas necesarias para reducir memoria y evitar cargar
+    # columnas de notas o medidas sanitarias que no entran en esta simulación.
     cols = ["CountryName", "CountryCode", "Jurisdiction", "Date", "ConfirmedCases"]
     df = pd.read_csv(path, usecols=cols)
 
@@ -109,6 +121,9 @@ def load_csv(
     )
     previous = smoothed.shift(rt_lag)
     rt = (smoothed / previous).replace([np.inf, -np.inf], np.nan)
+
+    # Cuando no hay datos suficientes para calcular el cociente, usamos Rt = 1:
+    # una elección neutra donde cada caso produce, en promedio, un caso nuevo.
     df["Rt"] = rt.fillna(1.0).clip(lower=rt_min, upper=rt_max)
 
     # Recortamos la serie para empezar cuando la epidemia ya tiene una señal

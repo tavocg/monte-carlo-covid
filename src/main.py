@@ -9,13 +9,20 @@ import simulation
 
 def write_figures(summary, observed, output_dir: Path) -> None:
     """Genera figuras de casos diarios y acumulados por país."""
+    # Todas las figuras quedan bajo report/generated/figures para que el
+    # archivo LaTeX pueda incluirlas con rutas estables.
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     for country_code, country_summary in summary.groupby("country_code"):
+        # summary contiene los resultados simulados; observed conserva los
+        # datos reales preparados desde el dataset para compararlos en la misma
+        # escala temporal.
         country_observed = observed[observed["CountryCode"].eq(country_code)]
 
-        # Graficamos casos diarios simulados contra los casos observados.
+        # Graficamos el promedio Monte Carlo y el rango intercuartil contra los
+        # casos diarios observados. El promedio representa el valor esperado
+        # estimado, no una predicción exacta día por día.
         plt.figure(figsize=(10, 5))
         plt.plot(
             country_summary["date"],
@@ -44,7 +51,8 @@ def write_figures(summary, observed, output_dir: Path) -> None:
         plt.savefig(figures_dir / f"{country_code}_daily_cases.png", dpi=160)
         plt.close()
 
-        # Graficamos la evolución acumulada de las simulaciones.
+        # Graficamos la evolución acumulada de las simulaciones para observar
+        # cómo se acumula la diferencia entre trayectorias a lo largo del tiempo.
         plt.figure(figsize=(10, 5))
         plt.plot(
             country_summary["date"],
@@ -70,6 +78,9 @@ def write_figures(summary, observed, output_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+
+    # Estos argumentos permiten cambiar la corrida desde consola sin tocar el
+    # código. El reporte usa 1000 simulaciones y 30 días extra por defecto.
     parser.add_argument("--simulations", type=int, default=1000)
     parser.add_argument("--extra-days", type=int, default=30)
     parser.add_argument(
@@ -83,6 +94,9 @@ def main() -> None:
         n_simulations=args.simulations,
         n_extra_days=args.extra_days,
     )
+
+    # run_all_simulations prepara los datos, corre las simulaciones de todos los
+    # países y devuelve tanto las observaciones como los resúmenes simulados.
     observed, summary, _ = simulation.run_all_simulations(config=config)
 
     write_figures(summary, observed, args.output_dir)

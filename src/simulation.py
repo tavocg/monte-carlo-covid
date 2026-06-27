@@ -11,14 +11,26 @@ from datasets import DATA_DIR, load_datasets
 class Config:
     """Parámetros modificables para preparar datos y correr simulaciones."""
 
+    # Cantidad de trayectorias Monte Carlo independientes por país. Mientras
+    # más simulaciones se usen, más estable es el promedio estimado.
     n_simulations: int = 100
+
+    # Días agregados después del último dato observado. Sirven para dejar que
+    # aparezcan contagios secundarios generados cerca del final de la serie.
     n_extra_days: int = 30
+
+    # Parámetros de la distribución de retraso entre contagio inicial y casos
+    # secundarios observados.
     mean_delay: float = 5
     dispersion_delay: float = 2
+
+    # Parámetros usados para estimar Rt desde la serie de casos observados.
     rt_window: int = 7
     rt_lag: int = 5
     rt_min: float = 0.0
     rt_max: float = 2.0
+
+    # Umbral mínimo para decidir desde qué día empieza la simulación.
     min_daily_cases: int = 100
 
 
@@ -80,13 +92,15 @@ def simulate_epidemic(
 
     for day in range(n_days):
         # Cada persona infectada hoy puede generar contagios secundarios según
-        # el Rt estimado para ese día.
+        # el Rt estimado para ese día. Después del día inicial, este valor sale
+        # de la propia simulación, no de los casos reales del dataset.
         infected_today = simulated_new_cases[day]
         if infected_today <= 0:
             continue
 
         # El total de casos secundarios se modela con una Poisson centrada en
-        # infected_today * Rt.
+        # infected_today * Rt. Esta es una de las fuentes de azar Monte Carlo:
+        # dos corridas con el mismo Rt pueden producir distintos contagios.
         total_secondary_cases = rng.poisson(lam=infected_today * rt_values[day])
         if total_secondary_cases <= 0:
             continue
@@ -105,6 +119,8 @@ def simulate_epidemic(
 
         # Algunos contagios secundarios pueden caer fuera del horizonte de
         # simulación; esta binomial conserva solo los que sí pueden observarse.
+        # Por ejemplo, si queda poca ventana al final, una parte de los casos se
+        # pierde porque aparecería después de total_days.
         valid_secondary_cases = rng.binomial(
             n=int(total_secondary_cases),
             p=float(valid_probability),
@@ -113,7 +129,8 @@ def simulate_epidemic(
             continue
 
         # Distribuimos los casos secundarios válidos entre los días futuros
-        # usando las probabilidades de retraso normalizadas.
+        # usando las probabilidades de retraso normalizadas. Esta multinomial
+        # decide en qué días aparecerán los contagios simulados.
         valid_probs_sum = valid_probs.sum()
         delay_counts = rng.multinomial(
             n=int(valid_secondary_cases),
@@ -152,11 +169,16 @@ def run_country_simulations(
     # Ordenamos por fecha para que Rt y los casos iniciales sigan la secuencia
     # temporal correcta.
     country_df = country_df.sort_values("date").reset_index(drop=True)
+
+    # El dataset condiciona todas las simulaciones de este país: aporta la
+    # serie de Rt, el primer número de casos y las fechas. No se reinyectan los
+    # casos reales día a día después del inicio.
     rt_values = country_df["Rt"].to_numpy(dtype=float)
     initial_cases = max(1, int(country_df.loc[0, "observed_new_cases"]))
 
     # Ejecutamos varias simulaciones independientes. El seed_offset evita que
-    # dos países usen las mismas semillas cuando se corre todo el conjunto.
+    # dos países usen las mismas semillas cuando se corre todo el conjunto. La
+    # independencia viene de cambiar la semilla en cada iteración.
     simulations = np.array(
         [
             simulate_epidemic(
@@ -181,7 +203,8 @@ def run_country_simulations(
     cumulative = np.cumsum(simulations, axis=1)
 
     # Resumimos la distribución diaria de casos y de acumulados con promedios
-    # y percentiles.
+    # y percentiles. El promedio diario es la estimación Monte Carlo del valor
+    # esperado de casos nuevos para cada fecha.
     summary = pd.DataFrame(
         {
             "country_code": country_df["CountryCode"].iloc[0],
@@ -201,6 +224,8 @@ def run_country_simulations(
     )
 
     # Calculamos métricas agregadas por simulación para comparar países.
+    # Estas métricas se calculan por trayectoria y luego se resumen con medianas
+    # o percentiles para no depender de una sola corrida aleatoria.
     peak_indices = np.argmax(simulations, axis=1)
     peak_dates = pd.Series(dates[peak_indices])
     peak_sizes = np.max(simulations, axis=1)
